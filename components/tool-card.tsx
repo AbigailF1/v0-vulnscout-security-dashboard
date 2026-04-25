@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Tool, RiskLevel } from '@/lib/types';
-import { Shield, Scan, Package, Layers, Briefcase } from 'lucide-react';
+import { Shield, Scan, Package, Layers, Briefcase, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ToolCardProps {
@@ -28,9 +29,28 @@ function getRiskBadgeStyles(riskLevel: RiskLevel): string {
   }
 }
 
+function getBadgeStyles(badge: string): string {
+  switch (badge) {
+    case 'Popular':
+      return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+    case 'Trending':
+      return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+    case 'Essential':
+      return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+    case 'Security':
+      return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
+    case 'Infra':
+      return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20';
+    case 'New':
+      return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
+}
+
 export function ToolCard({ tool, onScan }: ToolCardProps) {
   return (
-    <div className="glass-card rounded-xl p-5 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/5 group">
+    <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:border-border/80 hover:shadow-sm group">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -43,13 +63,23 @@ export function ToolCard({ tool, onScan }: ToolCardProps) {
             <p className="text-xs text-muted-foreground">{tool.ecosystem}</p>
           </div>
         </div>
-        <Badge 
-          variant="outline" 
-          className={cn('text-xs font-medium border', getRiskBadgeStyles(tool.riskLevel))}
-        >
-          <Shield className="h-3 w-3 mr-1" />
-          {tool.riskLevel}
-        </Badge>
+        <div className="flex flex-col items-end gap-1.5">
+          {tool.badge && (
+            <Badge 
+              variant="outline" 
+              className={cn('text-xs font-medium border', getBadgeStyles(tool.badge))}
+            >
+              {tool.badge}
+            </Badge>
+          )}
+          <Badge 
+            variant="outline" 
+            className={cn('text-xs font-medium border', getRiskBadgeStyles(tool.riskLevel))}
+          >
+            <Shield className="h-3 w-3 mr-1" />
+            {tool.riskLevel}
+          </Badge>
+        </div>
       </div>
 
       <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
@@ -57,31 +87,44 @@ export function ToolCard({ tool, onScan }: ToolCardProps) {
       </p>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <Badge variant="secondary" className="text-xs bg-secondary/50">
+        <Badge variant="secondary" className="text-xs">
           <Layers className="h-3 w-3 mr-1" />
           {tool.category}
         </Badge>
-        <Badge variant="secondary" className="text-xs bg-secondary/50">
+        <Badge variant="secondary" className="text-xs">
           <Briefcase className="h-3 w-3 mr-1" />
           {tool.useCase}
         </Badge>
       </div>
 
-      <Button 
-        onClick={() => onScan(tool)}
-        className="w-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all duration-300"
-        variant="outline"
-      >
-        <Scan className="h-4 w-4 mr-2" />
-        Scan with OSV
-      </Button>
+      <div className="flex gap-2">
+        <Button 
+          onClick={() => onScan(tool)}
+          className="flex-1"
+          variant="outline"
+          size="sm"
+        >
+          <Scan className="h-4 w-4 mr-2" />
+          Scan
+        </Button>
+        <Button 
+          asChild
+          variant="ghost"
+          size="sm"
+        >
+          <Link href={`/packages/${encodeURIComponent(tool.ecosystem)}/${encodeURIComponent(tool.name)}`}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Details
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
 
 export function ToolCardSkeleton() {
   return (
-    <div className="glass-card rounded-xl p-5 animate-pulse">
+    <div className="rounded-xl border border-border bg-card p-5 animate-pulse">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-muted" />
@@ -90,7 +133,10 @@ export function ToolCardSkeleton() {
             <div className="h-3 w-12 bg-muted rounded" />
           </div>
         </div>
-        <div className="h-5 w-20 bg-muted rounded" />
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="h-5 w-16 bg-muted rounded" />
+          <div className="h-5 w-20 bg-muted rounded" />
+        </div>
       </div>
       <div className="h-4 w-full bg-muted rounded mb-2" />
       <div className="h-4 w-3/4 bg-muted rounded mb-4" />
@@ -98,7 +144,10 @@ export function ToolCardSkeleton() {
         <div className="h-5 w-16 bg-muted rounded" />
         <div className="h-5 w-20 bg-muted rounded" />
       </div>
-      <div className="h-9 w-full bg-muted rounded" />
+      <div className="flex gap-2">
+        <div className="h-8 flex-1 bg-muted rounded" />
+        <div className="h-8 w-20 bg-muted rounded" />
+      </div>
     </div>
   );
 }

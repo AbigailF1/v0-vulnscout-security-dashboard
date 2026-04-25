@@ -71,11 +71,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, ecosystem, version } = body;
 
-    if (!name || !ecosystem || !version) {
+    if (!name || !ecosystem) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, ecosystem, version' },
+        { error: 'Missing required fields: name, ecosystem' },
         { status: 400 }
       );
+    }
+
+    // Build OSV query - version is optional
+    const osvQuery: Record<string, unknown> = {
+      package: {
+        name,
+        ecosystem,
+      },
+    };
+
+    if (version) {
+      osvQuery.version = version;
     }
 
     const osvResponse = await fetch('https://api.osv.dev/v1/query', {
@@ -83,13 +95,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        package: {
-          name,
-          ecosystem,
-        },
-        version,
-      }),
+      body: JSON.stringify(osvQuery),
     });
 
     if (!osvResponse.ok) {
@@ -114,7 +120,7 @@ export async function POST(request: NextRequest) {
     const result: ScanResult = {
       package: name,
       ecosystem,
-      version,
+      version: version || 'all versions',
       vulnerabilityCount,
       riskScore: score,
       riskLevel: level,

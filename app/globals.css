@@ -3,51 +3,91 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* VulnScout uses dark theme by default */
+/* Light mode (default) */
 :root {
-  --background: oklch(0.11 0.01 260);
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.145 0.01 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0.01 260);
+  --primary: oklch(0.55 0.18 170);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.96 0.005 260);
+  --secondary-foreground: oklch(0.2 0.01 260);
+  --muted: oklch(0.96 0.005 260);
+  --muted-foreground: oklch(0.45 0.01 260);
+  --accent: oklch(0.96 0.005 260);
+  --accent-foreground: oklch(0.2 0.01 260);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.91 0.005 260);
+  --input: oklch(0.91 0.005 260);
+  --ring: oklch(0.55 0.18 170);
+  --chart-1: oklch(0.55 0.18 170);
+  --chart-2: oklch(0.5 0.15 200);
+  --chart-3: oklch(0.5 0.18 280);
+  --chart-4: oklch(0.6 0.18 40);
+  --chart-5: oklch(0.55 0.22 25);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.145 0.01 260);
+  --sidebar-primary: oklch(0.55 0.18 170);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.96 0.005 260);
+  --sidebar-accent-foreground: oklch(0.2 0.01 260);
+  --sidebar-border: oklch(0.91 0.005 260);
+  --sidebar-ring: oklch(0.55 0.18 170);
+  
+  /* Custom colors for VulnScout */
+  --success: oklch(0.55 0.18 160);
+  --warning: oklch(0.7 0.18 80);
+  --critical: oklch(0.55 0.22 25);
+}
+
+/* Dark mode */
+.dark {
+  --background: oklch(0.1 0.01 260);
   --foreground: oklch(0.95 0 0);
-  --card: oklch(0.15 0.01 260);
+  --card: oklch(0.14 0.01 260);
   --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.13 0.01 260);
+  --popover: oklch(0.12 0.01 260);
   --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.7 0.18 160);
-  --primary-foreground: oklch(0.1 0.01 160);
-  --secondary: oklch(0.22 0.01 260);
+  --primary: oklch(0.7 0.18 170);
+  --primary-foreground: oklch(0.1 0.01 170);
+  --secondary: oklch(0.2 0.01 260);
   --secondary-foreground: oklch(0.9 0 0);
-  --muted: oklch(0.2 0.01 260);
+  --muted: oklch(0.18 0.01 260);
   --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.55 0.2 280);
+  --accent: oklch(0.2 0.01 260);
   --accent-foreground: oklch(0.95 0 0);
   --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.25 0.01 260);
-  --input: oklch(0.18 0.01 260);
-  --ring: oklch(0.7 0.18 160);
-  --chart-1: oklch(0.7 0.18 160);
+  --border: oklch(0.22 0.01 260);
+  --input: oklch(0.16 0.01 260);
+  --ring: oklch(0.7 0.18 170);
+  --chart-1: oklch(0.7 0.18 170);
   --chart-2: oklch(0.6 0.15 200);
-  --chart-3: oklch(0.55 0.2 280);
-  --chart-4: oklch(0.65 0.2 40);
+  --chart-3: oklch(0.55 0.18 280);
+  --chart-4: oklch(0.65 0.18 40);
   --chart-5: oklch(0.55 0.22 25);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.13 0.01 260);
+  --sidebar: oklch(0.12 0.01 260);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.7 0.18 160);
-  --sidebar-primary-foreground: oklch(0.1 0.01 160);
-  --sidebar-accent: oklch(0.2 0.01 260);
+  --sidebar-primary: oklch(0.7 0.18 170);
+  --sidebar-primary-foreground: oklch(0.1 0.01 170);
+  --sidebar-accent: oklch(0.18 0.01 260);
   --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.25 0.01 260);
-  --sidebar-ring: oklch(0.7 0.18 160);
+  --sidebar-border: oklch(0.22 0.01 260);
+  --sidebar-ring: oklch(0.7 0.18 170);
   
-  /* Custom colors for VulnScout */
   --success: oklch(0.7 0.18 160);
   --warning: oklch(0.75 0.18 80);
   --critical: oklch(0.55 0.22 25);
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'JetBrains Mono Fallback', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -95,43 +135,58 @@
   }
 }
 
-/* Glass card effect */
-.glass-card {
-  background: linear-gradient(
-    135deg,
-    oklch(0.18 0.01 260 / 0.8) 0%,
-    oklch(0.12 0.01 260 / 0.6) 100%
-  );
-  backdrop-filter: blur(12px);
-  border: 1px solid oklch(0.3 0.01 260 / 0.5);
-}
-
-.glass-card:hover {
-  background: linear-gradient(
-    135deg,
-    oklch(0.2 0.01 260 / 0.85) 0%,
-    oklch(0.14 0.01 260 / 0.65) 100%
-  );
-  border-color: oklch(0.4 0.01 260 / 0.6);
-}
-
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, oklch(0.7 0.18 160) 0%, oklch(0.6 0.15 200) 100%);
+  background: linear-gradient(135deg, oklch(0.55 0.18 170) 0%, oklch(0.5 0.15 200) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Risk level colors */
-.risk-safe { color: oklch(0.7 0.18 160); }
-.risk-low { color: oklch(0.75 0.15 140); }
-.risk-medium { color: oklch(0.75 0.18 80); }
-.risk-high { color: oklch(0.65 0.2 40); }
-.risk-critical { color: oklch(0.55 0.22 25); }
+.dark .gradient-text {
+  background: linear-gradient(135deg, oklch(0.7 0.18 170) 0%, oklch(0.6 0.15 200) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
-.bg-risk-safe { background-color: oklch(0.7 0.18 160 / 0.15); }
-.bg-risk-low { background-color: oklch(0.75 0.15 140 / 0.15); }
-.bg-risk-medium { background-color: oklch(0.75 0.18 80 / 0.15); }
-.bg-risk-high { background-color: oklch(0.65 0.2 40 / 0.15); }
-.bg-risk-critical { background-color: oklch(0.55 0.22 25 / 0.15); }
+/* Risk level colors - Light mode */
+.risk-safe { color: oklch(0.5 0.18 160); }
+.risk-low { color: oklch(0.55 0.15 140); }
+.risk-medium { color: oklch(0.65 0.18 80); }
+.risk-high { color: oklch(0.55 0.2 40); }
+.risk-critical { color: oklch(0.5 0.22 25); }
+
+.bg-risk-safe { background-color: oklch(0.5 0.18 160 / 0.1); }
+.bg-risk-low { background-color: oklch(0.55 0.15 140 / 0.1); }
+.bg-risk-medium { background-color: oklch(0.65 0.18 80 / 0.1); }
+.bg-risk-high { background-color: oklch(0.55 0.2 40 / 0.1); }
+.bg-risk-critical { background-color: oklch(0.5 0.22 25 / 0.1); }
+
+/* Risk level colors - Dark mode */
+.dark .risk-safe { color: oklch(0.7 0.18 160); }
+.dark .risk-low { color: oklch(0.72 0.15 140); }
+.dark .risk-medium { color: oklch(0.75 0.18 80); }
+.dark .risk-high { color: oklch(0.65 0.2 40); }
+.dark .risk-critical { color: oklch(0.6 0.22 25); }
+
+.dark .bg-risk-safe { background-color: oklch(0.7 0.18 160 / 0.15); }
+.dark .bg-risk-low { background-color: oklch(0.72 0.15 140 / 0.15); }
+.dark .bg-risk-medium { background-color: oklch(0.75 0.18 80 / 0.15); }
+.dark .bg-risk-high { background-color: oklch(0.65 0.2 40 / 0.15); }
+.dark .bg-risk-critical { background-color: oklch(0.6 0.22 25 / 0.15); }
+
+/* Hero gradient backgrounds */
+.hero-gradient-light {
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.55 0.18 170 / 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 50%, oklch(0.5 0.15 200 / 0.1), transparent),
+    radial-gradient(ellipse 50% 30% at 20% 80%, oklch(0.55 0.18 170 / 0.08), transparent);
+}
+
+.hero-gradient-dark {
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.7 0.18 170 / 0.2), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 50%, oklch(0.6 0.15 200 / 0.15), transparent),
+    radial-gradient(ellipse 50% 30% at 20% 80%, oklch(0.7 0.18 170 / 0.1), transparent);
+}

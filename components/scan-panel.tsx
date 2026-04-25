@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import type { Tool, ScanResult, RiskLevel } from '@/lib/types';
-import { ecosystems } from '@/lib/tools-data';
+import { ECOSYSTEMS } from '@/lib/types';
 import { 
   Shield, 
   AlertTriangle, 
@@ -184,7 +184,7 @@ export function ScanPanel({ tool, isOpen, onClose, onScanComplete }: ScanPanelPr
 
         <div className="mt-6 space-y-6">
           {/* Scan Form */}
-          <div className="glass-card rounded-xl p-4">
+          <div className="rounded-xl border border-border bg-card p-4">
             <FieldGroup className="space-y-4">
               <Field>
                 <FieldLabel htmlFor="packageName">Package Name</FieldLabel>
@@ -204,7 +204,7 @@ export function ScanPanel({ tool, isOpen, onClose, onScanComplete }: ScanPanelPr
                     <SelectValue placeholder="Select ecosystem" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ecosystems.map((eco) => (
+                    {ECOSYSTEMS.map((eco) => (
                       <SelectItem key={eco} value={eco}>
                         {eco}
                       </SelectItem>
@@ -246,7 +246,7 @@ export function ScanPanel({ tool, isOpen, onClose, onScanComplete }: ScanPanelPr
 
           {/* Error State */}
           {error && (
-            <div className="glass-card rounded-xl p-4 border-destructive/50 bg-destructive/10">
+            <div className="rounded-xl p-4 border border-destructive/50 bg-destructive/10">
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
                 <p className="text-sm font-medium">{error}</p>
@@ -259,7 +259,7 @@ export function ScanPanel({ tool, isOpen, onClose, onScanComplete }: ScanPanelPr
             <ScrollArea className="h-[calc(100vh-450px)]">
               <div className="space-y-4 pr-4">
                 {/* Risk Overview */}
-                <div className="glass-card rounded-xl p-4">
+                <div className="rounded-xl border border-border bg-card p-4">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       {getRiskIcon(result.riskLevel)}
@@ -299,7 +299,7 @@ export function ScanPanel({ tool, isOpen, onClose, onScanComplete }: ScanPanelPr
                 </div>
 
                 {/* Recommendation */}
-                <div className="glass-card rounded-xl p-4">
+                <div className="rounded-xl bg-secondary/50 p-4">
                   <h4 className="text-sm font-medium text-foreground mb-2">Recommendation</h4>
                   <p className="text-sm text-muted-foreground">{result.recommendation}</p>
                 </div>
@@ -311,7 +311,7 @@ export function ScanPanel({ tool, isOpen, onClose, onScanComplete }: ScanPanelPr
                       Vulnerabilities ({result.vulnerabilities.length})
                     </h4>
                     {result.vulnerabilities.map((vuln) => (
-                      <div key={vuln.id} className="glass-card rounded-xl p-4">
+                      <div key={vuln.id} className="rounded-xl border border-border bg-card p-4">
                         <div className="flex items-start justify-between mb-2">
                           <code className="text-sm font-mono text-primary">{vuln.id}</code>
                           <Badge className={cn('text-xs', getSeverityBadgeStyles(vuln.severity))}>
@@ -355,7 +355,7 @@ export function ScanPanel({ tool, isOpen, onClose, onScanComplete }: ScanPanelPr
 
                 {/* Empty State */}
                 {result.vulnerabilities.length === 0 && (
-                  <div className="glass-card rounded-xl p-8 text-center">
+                  <div className="rounded-xl border border-border bg-card p-8 text-center">
                     <CheckCircle2 className="h-12 w-12 text-primary mx-auto mb-3" />
                     <h4 className="text-lg font-medium text-foreground mb-1">All Clear!</h4>
                     <p className="text-sm text-muted-foreground">
