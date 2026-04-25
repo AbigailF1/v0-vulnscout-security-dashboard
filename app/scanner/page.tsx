@@ -1,22 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   Search,
   Shield,
   AlertTriangle,
-  CheckCircle2,
   ExternalLink,
   ChevronRight,
-  Clock,
   Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -25,8 +21,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import { ECOSYSTEMS } from '@/lib/types';
-import type { ScanResult, Ecosystem } from '@/lib/types';
+import { ECOSYSTEMS, type Ecosystem } from '@/lib/types';
+import { ScanResults } from '@/components/scan-results';
+import { AIChatButton } from '@/components/ai-chat-panel';
 
 const recentExamples = [
   { name: 'lodash', ecosystem: 'npm', version: '4.17.21' },
@@ -34,48 +31,19 @@ const recentExamples = [
   { name: 'log4j-core', ecosystem: 'Maven', version: '2.14.1' },
   { name: 'express', ecosystem: 'npm', version: '4.17.1' },
   { name: 'django', ecosystem: 'PyPI', version: '3.2.0' },
+  { name: 'axios', ecosystem: 'npm', version: '0.21.1' },
 ];
-
-function getRiskColor(level: string): string {
-  switch (level) {
-    case 'Safe':
-      return 'risk-safe';
-    case 'Low':
-      return 'risk-low';
-    case 'Medium':
-      return 'risk-medium';
-    case 'High':
-      return 'risk-high';
-    case 'Critical':
-      return 'risk-critical';
-    default:
-      return 'text-muted-foreground';
-  }
-}
-
-function getRiskBgColor(level: string): string {
-  switch (level) {
-    case 'Safe':
-      return 'bg-risk-safe';
-    case 'Low':
-      return 'bg-risk-low';
-    case 'Medium':
-      return 'bg-risk-medium';
-    case 'High':
-      return 'bg-risk-high';
-    case 'Critical':
-      return 'bg-risk-critical';
-    default:
-      return 'bg-muted';
-  }
-}
 
 export default function ScannerPage() {
   const [packageName, setPackageName] = useState('');
   const [ecosystem, setEcosystem] = useState<Ecosystem>('npm');
   const [version, setVersion] = useState('');
   const [isScanning, setIsScanning] = useState(false);
-  const [result, setResult] = useState<ScanResult | null>(null);
+  const [scannedPackage, setScannedPackage] = useState<{
+    name: string;
+    ecosystem: string;
+    version?: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleScan = async () => {
@@ -86,37 +54,29 @@ export default function ScannerPage() {
 
     setIsScanning(true);
     setError(null);
-    setResult(null);
 
-    try {
-      const response = await fetch('/api/osv/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: packageName.trim(),
-          ecosystem,
-          version: version.trim() || undefined,
-        }),
-      });
+    // Small delay for better UX
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to scan package');
-      }
-
-      setResult(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsScanning(false);
-    }
+    setScannedPackage({
+      name: packageName.trim(),
+      ecosystem,
+      version: version.trim() || undefined,
+    });
+    
+    setIsScanning(false);
   };
 
   const handleExampleClick = (example: (typeof recentExamples)[0]) => {
     setPackageName(example.name);
     setEcosystem(example.ecosystem as Ecosystem);
     setVersion(example.version);
+  };
+
+  const handleRescan = () => {
+    if (scannedPackage) {
+      setScannedPackage({ ...scannedPackage });
+    }
   };
 
   return (
@@ -132,15 +92,16 @@ export default function ScannerPage() {
           </div>
           <p className="text-muted-foreground max-w-2xl">
             Enter a package name, ecosystem, and version to scan for known vulnerabilities using the
-            OSV database.
+            OSV database. Get detailed CVE information, CVSS scores, and remediation guidance.
           </p>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid gap-8 lg:grid-cols-[1fr,400px]">
-          {/* Scanner Form */}
+        <div className="grid gap-8 lg:grid-cols-[1fr,350px]">
+          {/* Main Content */}
           <div className="space-y-6">
+            {/* Scanner Form */}
             <Card>
               <CardHeader>
                 <CardTitle>Scan a Package</CardTitle>
@@ -192,7 +153,7 @@ export default function ScannerPage() {
                 <Button onClick={handleScan} disabled={isScanning} className="w-full h-11">
                   {isScanning ? (
                     <>
-                      <Spinner className="mr-2" />
+                      <Spinner className="mr-2" size="sm" />
                       Scanning...
                     </>
                   ) : (
@@ -213,97 +174,13 @@ export default function ScannerPage() {
             </Card>
 
             {/* Results */}
-            {result && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Package className="h-5 w-5" />
-                        {result.package}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        {result.ecosystem} • {result.version || 'latest'}
-                      </CardDescription>
-                    </div>
-                    <Badge className={`${getRiskBgColor(result.riskLevel)} ${getRiskColor(result.riskLevel)} border-0`}>
-                      {result.riskLevel}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Risk Score */}
-                  <div className="flex items-center gap-6">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Risk Score</div>
-                      <div className={`text-3xl font-bold ${getRiskColor(result.riskLevel)}`}>
-                        {result.riskScore}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Vulnerabilities</div>
-                      <div className="text-3xl font-bold">{result.vulnerabilityCount}</div>
-                    </div>
-                  </div>
-
-                  {/* Recommendation */}
-                  <div className="rounded-lg bg-secondary/50 p-4">
-                    <div className="flex items-start gap-3">
-                      {result.riskLevel === 'Safe' ? (
-                        <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
-                      ) : (
-                        <AlertTriangle className={`h-5 w-5 mt-0.5 ${getRiskColor(result.riskLevel)}`} />
-                      )}
-                      <div>
-                        <div className="font-medium">Recommendation</div>
-                        <p className="text-sm text-muted-foreground mt-1">{result.recommendation}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Vulnerabilities List */}
-                  {result.vulnerabilities.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Vulnerabilities Found</h4>
-                      <div className="space-y-3">
-                        {result.vulnerabilities.map((vuln) => (
-                          <div
-                            key={vuln.id}
-                            className="rounded-lg border border-border bg-card p-4 space-y-2"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="font-mono text-sm font-medium">{vuln.id}</div>
-                                <p className="text-sm text-muted-foreground mt-1">{vuln.summary}</p>
-                              </div>
-                              <Badge variant="outline" className="shrink-0">
-                                {vuln.severity || 'Unknown'}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Published: {new Date(vuln.published).toLocaleDateString()}
-                              </span>
-                              {vuln.references.length > 0 && (
-                                <a
-                                  href={vuln.references[0]}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-primary hover:underline"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                  View Details
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            {scannedPackage && (
+              <ScanResults
+                packageName={scannedPackage.name}
+                ecosystem={scannedPackage.ecosystem}
+                version={scannedPackage.version}
+                onRescan={handleRescan}
+              />
             )}
           </div>
 
@@ -335,6 +212,36 @@ export default function ScannerPage() {
 
             <Card>
               <CardHeader>
+                <CardTitle className="text-lg">Features</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground space-y-3">
+                <ul className="space-y-2">
+                  <li className="flex items-start gap-2">
+                    <Package className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>CVSS score distribution charts</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Package className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>Sortable and filterable vulnerability table</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Package className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>Export results as JSON, Markdown, or CSV</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Package className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>AI-powered vulnerability explanations</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Package className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>15-minute result caching</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle className="text-lg">About OSV</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground space-y-3">
@@ -357,6 +264,9 @@ export default function ScannerPage() {
           </div>
         </div>
       </div>
+
+      {/* Floating AI Chat Button */}
+      <AIChatButton />
     </div>
   );
 }
