@@ -1,70 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { ScanResult, RiskLevel, Vulnerability } from '@/lib/types';
-
-interface OSVVulnerability {
-  id: string;
-  summary?: string;
-  details?: string;
-  published?: string;
-  modified?: string;
-  severity?: Array<{
-    type: string;
-    score: string;
-  }>;
-  references?: Array<{
-    type: string;
-    url: string;
-  }>;
-}
-
-interface OSVResponse {
-  vulns?: OSVVulnerability[];
-}
-
-function computeRisk(vulnerabilityCount: number): { score: number; level: RiskLevel } {
-  if (vulnerabilityCount === 0) {
-    return { score: 0, level: 'Safe' };
-  } else if (vulnerabilityCount === 1) {
-    return { score: 30, level: 'Low' };
-  } else if (vulnerabilityCount <= 3) {
-    return { score: 60, level: 'Medium' };
-  } else if (vulnerabilityCount <= 6) {
-    return { score: 80, level: 'High' };
-  } else {
-    return { score: 95, level: 'Critical' };
-  }
-}
-
-function getRecommendation(riskLevel: RiskLevel): string {
-  switch (riskLevel) {
-    case 'Safe':
-      return 'No known vulnerabilities found. This version appears safe to use.';
-    case 'Low':
-      return 'Minor vulnerability detected. Review advisories before using in production.';
-    case 'Medium':
-      return 'Multiple vulnerabilities found. Consider upgrading to a patched version.';
-    case 'High':
-      return 'Significant vulnerabilities detected. Upgrade to a patched version immediately.';
-    case 'Critical':
-      return 'Critical security issues found. Avoid this version in production environments.';
-    default:
-      return 'Scan the package to check for vulnerabilities.';
-  }
-}
-
-function extractSeverity(vuln: OSVVulnerability): string {
-  if (vuln.severity && vuln.severity.length > 0) {
-    const cvss = vuln.severity.find(s => s.type === 'CVSS_V3' || s.type === 'CVSS_V2');
-    if (cvss) {
-      const score = parseFloat(cvss.score);
-      if (score >= 9.0) return 'Critical';
-      if (score >= 7.0) return 'High';
-      if (score >= 4.0) return 'Medium';
-      if (score >= 0.1) return 'Low';
-    }
-  }
-  return 'Unknown';
-}
+import { 
+  OSVQueryResponseSchema, 
+  enrichVulnerability, 
+  type ScanResult,
+  type EnrichedVulnerability 
+} from '@/lib/osv-schemas';
+import { getCacheKey, getCachedResult, setCachedResult, getCacheExpiry, isCacheAvailable } from '@/lib/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,6 +17,14 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: name, ecosystem' },
         { status: 400 }
       );
+    }
+
+    // Check cache first
+    const cacheKey = getCacheKey(name, ecosystem, version);
+    const cached = await getCachedResult(cacheKey);
+    
+    if (cached) {
+      return NextResponse.json(cached);
     }
 
     // Build OSV query - version is optional
@@ -102,31 +51,82 @@ export async function POST(request: NextRequest) {
       throw new Error(`OSV API error: ${osvResponse.status}`);
     }
 
-    const data: OSVResponse = await osvResponse.json();
+    const rawData = await osvResponse.json();
+    
+    // Parse with Zod schema
+    const parseResult = OSVQueryResponseSchema.safeParse(rawData);
+    
+    if (!parseResult.success) {
+      console.error('OSV schema parse error:', parseResult.error);
+      // Continue with raw data, but log the issue
+    }
+    
+    const data = parseResult.success ? parseResult.data : rawData;
     const vulns = data.vulns || [];
-    const vulnerabilityCount = vulns.length;
-    const { score, level } = computeRisk(vulnerabilityCount);
 
-    const vulnerabilities: Vulnerability[] = vulns.map((vuln) => ({
-      id: vuln.id,
-      summary: vuln.summary || 'No summary available',
-      details: vuln.details || 'No details available',
-      published: vuln.published || 'Unknown',
-      modified: vuln.modified || 'Unknown',
-      severity: extractSeverity(vuln),
-      references: vuln.references?.map((ref) => ref.url) || [],
+    // Enrich vulnerabilities for UI
+    const enrichedVulns: EnrichedVulnerability[] = vulns.map(vuln => 
+      enrichVulnerability(vuln, name, ecosystem)
+    );
+
+    // Calculate severity distribution
+    const severityDistribution = {
+      critical: enrichedVulns.filter(v => v.severity === 'CRITICAL').length,
+      high: enrichedVulns.filter(v => v.severity === 'HIGH').length,
+      medium: enrichedVulns.filter(v => v.severity === 'MEDIUM').length,
+      low: enrichedVulns.filter(v => v.severity === 'LOW').length,
+      unknown: enrichedVulns.filter(v => v.severity === 'UNKNOWN').length,
+    };
+
+    // Calculate CVSS distribution (ranges)
+    const cvssRanges = [
+      { range: '9.0-10.0', min: 9.0, max: 10.1, count: 0 },
+      { range: '7.0-8.9', min: 7.0, max: 9.0, count: 0 },
+      { range: '4.0-6.9', min: 4.0, max: 7.0, count: 0 },
+      { range: '0.1-3.9', min: 0.1, max: 4.0, count: 0 },
+      { range: 'Unknown', min: -1, max: 0.1, count: 0 },
+    ];
+
+    for (const vuln of enrichedVulns) {
+      const score = vuln.cvssScore;
+      if (score === null) {
+        cvssRanges[4].count++;
+      } else {
+        for (const range of cvssRanges) {
+          if (score >= range.min && score < range.max) {
+            range.count++;
+            break;
+          }
+        }
+      }
+    }
+
+    const cvssDistribution = cvssRanges.map(r => ({
+      range: r.range,
+      count: r.count,
     }));
+
+    // Sort vulnerabilities by severity
+    const severityOrder = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
+    enrichedVulns.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+    const scannedAt = new Date().toISOString();
+    const cachedUntil = isCacheAvailable() ? getCacheExpiry() : null;
 
     const result: ScanResult = {
       package: name,
       ecosystem,
       version: version || 'all versions',
-      vulnerabilityCount,
-      riskScore: score,
-      riskLevel: level,
-      vulnerabilities,
-      recommendation: getRecommendation(level),
+      scannedAt,
+      cachedUntil,
+      vulnerabilityCount: enrichedVulns.length,
+      severityDistribution,
+      cvssDistribution,
+      vulnerabilities: enrichedVulns,
     };
+
+    // Cache the result
+    await setCachedResult(cacheKey, result);
 
     return NextResponse.json(result);
   } catch (error) {

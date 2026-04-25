@@ -2,14 +2,10 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Package,
   Shield,
-  AlertTriangle,
-  CheckCircle2,
-  ExternalLink,
-  Clock,
   ArrowLeft,
   Search,
   ChevronRight,
@@ -21,41 +17,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { tools, getToolByEcosystemAndName } from '@/lib/tools-data';
-import type { Tool, ScanResult } from '@/lib/types';
-
-function getRiskColor(level: string): string {
-  switch (level) {
-    case 'Safe':
-      return 'risk-safe';
-    case 'Low':
-      return 'risk-low';
-    case 'Medium':
-      return 'risk-medium';
-    case 'High':
-      return 'risk-high';
-    case 'Critical':
-      return 'risk-critical';
-    default:
-      return 'text-muted-foreground';
-  }
-}
-
-function getRiskBgColor(level: string): string {
-  switch (level) {
-    case 'Safe':
-      return 'bg-risk-safe';
-    case 'Low':
-      return 'bg-risk-low';
-    case 'Medium':
-      return 'bg-risk-medium';
-    case 'High':
-      return 'bg-risk-high';
-    case 'Critical':
-      return 'bg-risk-critical';
-    default:
-      return 'bg-muted';
-  }
-}
+import type { Tool } from '@/lib/types';
+import { ScanResults } from '@/components/scan-results';
+import { AIChatButton } from '@/components/ai-chat-panel';
 
 export default function PackageDetailsPage({
   params,
@@ -64,14 +28,15 @@ export default function PackageDetailsPage({
 }) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tool, setTool] = useState<Tool | null>(null);
   const [version, setVersion] = useState('');
   const [isScanning, setIsScanning] = useState(false);
-  const [result, setResult] = useState<ScanResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [scannedVersion, setScannedVersion] = useState<string | null>(null);
 
   const ecosystem = decodeURIComponent(resolvedParams.ecosystem);
   const name = decodeURIComponent(resolvedParams.name);
+  const vulnFromUrl = searchParams.get('vuln');
 
   useEffect(() => {
     const foundTool = getToolByEcosystemAndName(ecosystem, name);
@@ -83,34 +48,10 @@ export default function PackageDetailsPage({
 
   const handleScan = async () => {
     if (!tool) return;
-
     setIsScanning(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const response = await fetch('/api/osv/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: tool.name,
-          ecosystem: tool.ecosystem,
-          version: version.trim() || undefined,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to scan package');
-      }
-
-      setResult(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsScanning(false);
-    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+    setScannedVersion(version.trim() || undefined);
+    setIsScanning(false);
   };
 
   // Get related packages (same ecosystem or category)
@@ -132,13 +73,16 @@ export default function PackageDetailsPage({
             The package &quot;{name}&quot; in ecosystem &quot;{ecosystem}&quot; was not found in our
             directory.
           </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            You can still scan it using the scanner.
+          </p>
           <div className="mt-6 flex items-center justify-center gap-4">
             <Button variant="outline" onClick={() => router.back()}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
             </Button>
             <Button asChild>
-              <Link href="/scanner">
+              <Link href={`/scanner?name=${encodeURIComponent(name)}&ecosystem=${encodeURIComponent(ecosystem)}`}>
                 <Search className="mr-2 h-4 w-4" />
                 Try Scanner
               </Link>
@@ -203,7 +147,7 @@ export default function PackageDetailsPage({
                     <Label htmlFor="version">Version</Label>
                     <Input
                       id="version"
-                      placeholder={tool.defaultVersion || 'e.g., 1.0.0'}
+                      placeholder={tool.defaultVersion || 'e.g., 1.0.0 (optional)'}
                       value={version}
                       onChange={(e) => setVersion(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleScan()}
@@ -213,7 +157,7 @@ export default function PackageDetailsPage({
                     <Button onClick={handleScan} disabled={isScanning} className="h-10">
                       {isScanning ? (
                         <>
-                          <Spinner className="mr-2" />
+                          <Spinner className="mr-2" size="sm" />
                           Scanning
                         </>
                       ) : (
@@ -225,109 +169,17 @@ export default function PackageDetailsPage({
                     </Button>
                   </div>
                 </div>
-
-                {error && (
-                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
-                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                    {error}
-                  </div>
-                )}
               </CardContent>
             </Card>
 
-            {/* Results */}
-            {result && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>Scan Results</CardTitle>
-                      <CardDescription>
-                        {result.package} @ {result.version || 'latest'}
-                      </CardDescription>
-                    </div>
-                    <Badge
-                      className={`${getRiskBgColor(result.riskLevel)} ${getRiskColor(result.riskLevel)} border-0`}
-                    >
-                      {result.riskLevel}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Risk Score */}
-                  <div className="flex items-center gap-6">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Risk Score</div>
-                      <div className={`text-3xl font-bold ${getRiskColor(result.riskLevel)}`}>
-                        {result.riskScore}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Vulnerabilities</div>
-                      <div className="text-3xl font-bold">{result.vulnerabilityCount}</div>
-                    </div>
-                  </div>
-
-                  {/* Recommendation */}
-                  <div className="rounded-lg bg-secondary/50 p-4">
-                    <div className="flex items-start gap-3">
-                      {result.riskLevel === 'Safe' ? (
-                        <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
-                      ) : (
-                        <AlertTriangle
-                          className={`h-5 w-5 mt-0.5 ${getRiskColor(result.riskLevel)}`}
-                        />
-                      )}
-                      <div>
-                        <div className="font-medium">Recommendation</div>
-                        <p className="text-sm text-muted-foreground mt-1">{result.recommendation}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Vulnerabilities */}
-                  {result.vulnerabilities.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Vulnerabilities Found</h4>
-                      <div className="space-y-3">
-                        {result.vulnerabilities.map((vuln) => (
-                          <div
-                            key={vuln.id}
-                            className="rounded-lg border border-border bg-card p-4 space-y-2"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="font-mono text-sm font-medium">{vuln.id}</div>
-                                <p className="text-sm text-muted-foreground mt-1">{vuln.summary}</p>
-                              </div>
-                              <Badge variant="outline" className="shrink-0">
-                                {vuln.severity || 'Unknown'}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {new Date(vuln.published).toLocaleDateString()}
-                              </span>
-                              {vuln.references.length > 0 && (
-                                <a
-                                  href={vuln.references[0]}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-primary hover:underline"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                  Details
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            {/* Results - Use new ScanResults component */}
+            {scannedVersion !== null && (
+              <ScanResults
+                packageName={tool.name}
+                ecosystem={tool.ecosystem}
+                version={scannedVersion || undefined}
+                onRescan={handleScan}
+              />
             )}
           </div>
 
@@ -386,6 +238,11 @@ export default function PackageDetailsPage({
           </div>
         </div>
       </div>
+
+      {/* Floating AI Chat Button */}
+      <AIChatButton 
+        packageContext={{ name: tool.name, ecosystem: tool.ecosystem }} 
+      />
     </div>
   );
 }
